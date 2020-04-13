@@ -8,14 +8,21 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/Kalinin-Andrey/rti-testing/internal/pkg/session"
 	"github.com/Kalinin-Andrey/rti-testing/pkg/config"
 
+	"github.com/Kalinin-Andrey/rti-testing/internal/pkg/session"
+
 	"github.com/Kalinin-Andrey/rti-testing/internal/app/api"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/component"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/condition"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/offer"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/price"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/product"
 	"github.com/Kalinin-Andrey/rti-testing/internal/domain/user"
 	"github.com/Kalinin-Andrey/rti-testing/internal/test/mock"
 )
@@ -48,7 +55,33 @@ var (
 		CreatedAt:	time.Now(),
 		UpdatedAt:	time.Now(),
 	}
-
+	conditions = []condition.Condition{
+		{
+			RuleName: "technology",
+			Value:    "xpon",
+		},
+		{
+			RuleName: "internetSpeed",
+			Value:    "200",
+		},
+	}
+	expectedOffer = offer.Offer{
+		Product: product.Product{
+			Name: "Игровой",
+			Components: []component.Component{{
+				IsMain: true,
+				Name:   "Интернет",
+				Prices: []price.Price{{
+					Cost: 765,
+					Type: price.TypeCost,
+				}},
+			}},
+		},
+		TotalCost: price.Price{
+			Cost: 765,
+			Type: price.TypeCost,
+		},
+	}
 )
 
 func start() *httptest.Server {
@@ -186,24 +219,29 @@ func TestLogin(t *testing.T) {
 	ts.Close()
 }
 
-/*func TestCreatePost(t *testing.T) {
-	caseName := "CreatePost"
+
+func TestCalculateOffer(t *testing.T) {
+	caseName :=		"CalculateOffer"
 	var result		interface{}
 	var expected	interface{}
 	ts := start()
 
-	reqBody := strings.NewReader(`{
-	"category": "programming",
-	"type": "text",
-	"title": "What does a good programmer mean?",
-	"text": "Who can consider himself a good programmer?"
-}`)
-	uri := "/api/posts"
-	expectedData := p
-	expectedStatus := http.StatusCreated
+	uri := "/api/product/1/offer"
+	reqBody := strings.NewReader(`[
+		{
+			"RuleName": "technology",
+			"Value":    "xpon"
+		},
+		{
+			"RuleName": "internetSpeed",
+			"Value":    "200"
+		}
+]`)
+	expectedStatus := http.StatusOK
 
-	a.postRepo.Response.Create.Entity	= p
-	a.postRepo.Response.Create.Err		= nil
+	a.productRepo.Response.Get.Entity	= &p
+	a.productRepo.Response.Get.Err		= nil
+	expectedData	:= expectedOffer
 
 	req, _ := http.NewRequest(http.MethodPost, ts.URL + uri, reqBody)
 	req.Header.Add("Content-Type", "application/json")
@@ -236,740 +274,4 @@ func TestLogin(t *testing.T) {
 	ts.Close()
 }
 
-func TestDeletePost(t *testing.T) {
-	caseName :=		"DeletePost"
-	var result		interface{}
-	var expected	interface{}
-	ts := start()
-
-	uri := "/api/post/1"
-	expectedData	:= errorshandler.SuccessMessage()
-	expectedStatus := http.StatusOK
-
-	a.postRepo.Response.Get.Entity		= p
-	a.postRepo.Response.Get.Err			= nil
-	a.voteRepo.Response.Query.List		= []vote.Vote{*v}
-	a.voteRepo.Response.Query.Err		= nil
-	a.commentRepo.Response.Query.List	= []comment.Comment{*co}
-	a.commentRepo.Response.Query.Err	= nil
-	a.postRepo.Response.Delete.Err		= nil
-
-	req, _ := http.NewRequest(http.MethodDelete, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestGetPost(t *testing.T) {
-	caseName :=		"GetPost"
-	var result		interface{}
-	var expected	interface{}
-	ts := start()
-
-	uri := "/api/post/1"
-	expectedStatus := http.StatusOK
-	post := *p
-	a.postRepo.Response.Get.Entity		= &post
-	a.postRepo.Response.Get.Err			= nil
-	a.voteRepo.Response.Query.List		= []vote.Vote{*v}
-	a.voteRepo.Response.Query.Err		= nil
-	a.commentRepo.Response.Query.List	= []comment.Comment{*co}
-	a.commentRepo.Response.Query.Err	= nil
-	a.postRepo.Response.Update.Entity	= &post
-	a.postRepo.Response.Update.Err		= nil
-	p.Views++
-	expectedData	:= p
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestGetPosts(t *testing.T) {
-	caseName :=		"GetPosts"
-	var result		interface{}
-	var expected	interface{}
-	ts := start()
-
-	uri := "/api/posts"
-	expectedData	:= []post.Post{*p}
-	expectedStatus := http.StatusOK
-	a.postRepo.Response.Query.List		= []post.Post{*p}
-	a.postRepo.Response.Query.Err		= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestGetPostsByCategory(t *testing.T) {
-	caseName :=		"GetPostsByCategory"
-	var result		interface{}
-	var expected	interface{}
-	ts := start()
-
-	uri := "/api/posts"
-	expectedData	:= []post.Post{*p}
-	expectedStatus := http.StatusOK
-	a.postRepo.Response.Query.List		= []post.Post{*p}
-	a.postRepo.Response.Query.Err		= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestGetPostsByUser(t *testing.T) {
-	caseName :=		"GetPostsByUser"
-	var result		interface{}
-	var expected	interface{}
-	ts := start()
-
-	uri := "/api/posts"
-	expectedData	:= []post.Post{*p}
-	expectedStatus := http.StatusOK
-	a.postRepo.Response.Query.List		= []post.Post{*p}
-	a.postRepo.Response.Query.Err		= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestCreateComment(t *testing.T) {
-	caseName := "CreateComment"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusCreated
-	ts := start()
-
-	reqBody := strings.NewReader(`{
-	"body": "Who care about comments?"
-}`)
-	uri := "/api/post/1"
-	expectedData := p
-
-	a.commentRepo.Response.Create.Entity	= co
-	a.commentRepo.Response.Create.Err		= nil
-	a.postRepo.Response.Get.Entity			= p
-	a.postRepo.Response.Get.Err				= nil
-
-	req, _ := http.NewRequest(http.MethodPost, ts.URL + uri, reqBody)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestDeleteComment(t *testing.T) {
-	caseName := "DeleteComment"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusOK
-	ts := start()
-
-	uri := "/api/post/1/10"
-	expectedData := p
-
-	a.commentRepo.Response.Delete.Err		= nil
-	a.postRepo.Response.Get.Entity			= p
-	a.postRepo.Response.Get.Err				= nil
-
-	req, _ := http.NewRequest(http.MethodDelete, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestUpvoteCreate(t *testing.T) {
-	caseName := "UpvoteCreate"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusOK
-	ts := start()
-
-	uri := "/api/post/1/upvote"
-	expectedData := p
-
-	a.voteRepo.Response.First.Entity	= nil
-	a.voteRepo.Response.First.Err		= apperror.ErrNotFound
-
-	a.voteRepo.Response.Create.Err		= nil
-
-	a.postRepo.Response.Update.Entity	= p
-	a.postRepo.Response.Update.Err		= nil
-
-	p.Score++
-	a.postRepo.Response.Get.Entity		= p
-	a.postRepo.Response.Get.Err			= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestDownvoteCreate(t *testing.T) {
-	caseName := "DownvoteCreate"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusOK
-	ts := start()
-
-	uri := "/api/post/1/downvote"
-	expectedData := p
-
-	a.voteRepo.Response.First.Entity	= nil
-	a.voteRepo.Response.First.Err		= apperror.ErrNotFound
-
-	a.voteRepo.Response.Create.Err		= nil
-
-	a.postRepo.Response.Update.Entity	= p
-	a.postRepo.Response.Update.Err		= nil
-
-	p.Score--
-	a.postRepo.Response.Get.Entity		= p
-	a.postRepo.Response.Get.Err			= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestUpvoteSecond(t *testing.T) {
-	caseName := "UpvoteSecond"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusOK
-	ts := start()
-
-	uri := "/api/post/1/upvote"
-	expectedData := p
-
-	a.voteRepo.Response.First.Entity	= v
-	a.voteRepo.Response.First.Err		= nil
-
-	a.postRepo.Response.Get.Entity		= p
-	a.postRepo.Response.Get.Err			= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestDownvoteSecond(t *testing.T) {
-	caseName := "DownvoteSecond"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusOK
-	ts := start()
-
-	uri := "/api/post/1/downvote"
-	expectedData := p
-
-	a.voteRepo.Response.First.Entity	= v
-	a.voteRepo.Response.First.Err		= nil
-
-	a.postRepo.Response.Get.Entity		= p
-	a.postRepo.Response.Get.Err			= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestUpvoteAfterDownvote(t *testing.T) {
-	caseName := "UpvoteAfterDownvote"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusOK
-	ts := start()
-
-	uri := "/api/post/1/upvote"
-	expectedData := p
-	vo := *v
-	vo.Value = -1
-	a.voteRepo.Response.First.Entity	= &vo
-	a.voteRepo.Response.First.Err		= nil
-
-	a.voteRepo.Response.Update.Err		= nil
-
-	a.postRepo.Response.Update.Entity	= p
-	a.postRepo.Response.Update.Err		= nil
-
-	p.Score += 2
-	a.postRepo.Response.Get.Entity		= p
-	a.postRepo.Response.Get.Err			= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestDownvoteAfterUpvote(t *testing.T) {
-	caseName := "DownvoteAfterUpvote"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusOK
-	ts := start()
-
-	uri := "/api/post/1/downvote"
-	expectedData := p
-	vo := *v
-	vo.Value = -1
-	a.voteRepo.Response.First.Entity	= &vo
-	a.voteRepo.Response.First.Err		= nil
-
-	a.voteRepo.Response.Update.Err		= nil
-
-	a.postRepo.Response.Update.Entity	= p
-	a.postRepo.Response.Update.Err		= nil
-
-	p.Score -= 2
-	a.postRepo.Response.Get.Entity		= p
-	a.postRepo.Response.Get.Err			= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestUnvoteAfterUpvote(t *testing.T) {
-	caseName := "UnvoteAfterUpvote"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusOK
-	ts := start()
-
-	uri := "/api/post/1/unvote"
-	expectedData := p
-
-	a.voteRepo.Response.First.Entity	= v
-	a.voteRepo.Response.First.Err		= nil
-
-	a.voteRepo.Response.Delete.Err		= nil
-
-	a.postRepo.Response.Update.Entity	= p
-	a.postRepo.Response.Update.Err		= nil
-
-	p.Score--
-	a.postRepo.Response.Get.Entity		= p
-	a.postRepo.Response.Get.Err			= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}
-
-func TestUnvoteAfterDownvote(t *testing.T) {
-	caseName := "UnvoteAfterDownvote"
-	var result		interface{}
-	var expected	interface{}
-	expectedStatus := http.StatusOK
-	ts := start()
-
-	uri := "/api/post/1/unvote"
-	expectedData := p
-	v.Value = -1
-	a.voteRepo.Response.First.Entity	= v
-	a.voteRepo.Response.First.Err		= nil
-
-	a.voteRepo.Response.Delete.Err		= nil
-
-	a.postRepo.Response.Update.Entity	= p
-	a.postRepo.Response.Update.Err		= nil
-
-	p.Score++
-	a.postRepo.Response.Get.Entity		= p
-	a.postRepo.Response.Get.Err			= nil
-
-	req, _ := http.NewRequest(http.MethodGet, ts.URL + uri, nil)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer " + c.token)
-	resp, err := c.client.Do(req)
-	if err != nil {
-		t.Errorf("[%s] request error: %v", caseName, err)
-		return
-	}
-	defer resp.Body.Close()
-	resBody, err := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != expectedStatus {
-		t.Errorf("[%s] expected http status %v, got %v", caseName, expectedStatus, resp.StatusCode)
-	}
-
-	err = json.Unmarshal(resBody, &result)
-	if err != nil {
-		t.Errorf("[%s] cant unpack json: %v", caseName, err)
-		return
-	}
-
-	jsonData, err := json.Marshal(expectedData)
-	json.Unmarshal(jsonData, &expected)
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("[%s] results not match\nGot: %#v\nExpected: %#v", caseName, result, expectedData)
-	}
-
-	ts.Close()
-}*/
 

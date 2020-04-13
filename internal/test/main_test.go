@@ -1,144 +1,157 @@
-package main
+package test
 
-import "testing"
+import (
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/component"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/condition"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/offer"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/price"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/product"
+	"github.com/Kalinin-Andrey/rti-testing/internal/domain/ruleapplicability"
+	"testing"
+)
 
-var product = Product{
+func Calculate(p *product.Product, conditions []condition.Condition) (offer *offer.Offer, err error) {
+	start()
+	return a.app.Domain.Offer.Service.Calculate(p, conditions)
+}
+
+var p = product.Product{
 	Name: "Игровой",
-	Components: []Component{
+	Components: []component.Component{
 		{
 			IsMain: true,
 			Name:   "Интернет",
-			Prices: []Price{
+			Prices: []price.Price{
 				{
 					Cost:      100,
-					PriceType: PriceTypeCost,
-					RuleApplicabilities: []RuleApplicability{
+					Type:		price.TypeCost,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "technology",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "adsl",
 						},
 						{
 							CodeName: "internetSpeed",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "10",
 						},
 					},
 				},
 				{
 					Cost:      150,
-					PriceType: PriceTypeCost,
-					RuleApplicabilities: []RuleApplicability{
+					Type:		price.TypeCost,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "technology",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "adsl",
 						},
 						{
 							CodeName: "internetSpeed",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "15",
 						},
 					},
 				},
 				{
 					Cost:      500,
-					PriceType: PriceTypeCost,
-					RuleApplicabilities: []RuleApplicability{
+					Type:		price.TypeCost,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "technology",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "xpon",
 						},
 						{
 							CodeName: "internetSpeed",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "100",
 						},
 					},
 				},
 				{
 					Cost:      900,
-					PriceType: PriceTypeCost,
-					RuleApplicabilities: []RuleApplicability{
+					Type: price.TypeCost,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "technology",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "xpon",
 						},
 						{
 							CodeName: "internetSpeed",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "200",
 						},
 					},
 				},
 				{
 					Cost:      200,
-					PriceType: PriceTypeCost,
-					RuleApplicabilities: []RuleApplicability{
+					Type: price.TypeCost,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "technology",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "fttb",
 						},
 						{
 							CodeName: "internetSpeed",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "30",
 						},
 					},
 				},
 				{
 					Cost:      400,
-					PriceType: PriceTypeCost,
-					RuleApplicabilities: []RuleApplicability{
+					Type: price.TypeCost,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "technology",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "fttb",
 						},
 						{
 							CodeName: "internetSpeed",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "50",
 						},
 					},
 				},
 				{
 					Cost:      600,
-					PriceType: PriceTypeCost,
-					RuleApplicabilities: []RuleApplicability{
+					Type: price.TypeCost,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "technology",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "fttb",
 						},
 						{
 							CodeName: "internetSpeed",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "200",
 						},
 					},
 				},
 				{
 					Cost:      10,
-					PriceType: PriceTypeDiscount,
-					RuleApplicabilities: []RuleApplicability{
+					Type: price.TypeDiscount,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "internetSpeed",
-							Operator: OperatorGreaterThanOrEqual,
+							Operator: ruleapplicability.OperatorGreaterThanOrEqual,
 							Value:    "50",
 						},
 					},
 				},
 				{
 					Cost:      15,
-					PriceType: PriceTypeDiscount,
-					RuleApplicabilities: []RuleApplicability{
+					Type: price.TypeDiscount,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "internetSpeed",
-							Operator: OperatorGreaterThanOrEqual,
+							Operator: ruleapplicability.OperatorGreaterThanOrEqual,
 							Value:    "100",
 						},
 					},
@@ -147,14 +160,14 @@ var product = Product{
 		},
 		{
 			Name: "ADSL Модем",
-			Prices: []Price{
+			Prices: []price.Price{
 				{
 					Cost:      300,
-					PriceType: PriceTypeCost,
-					RuleApplicabilities: []RuleApplicability{
+					Type: price.TypeCost,
+					RuleApplicabilities: []ruleapplicability.RuleApplicability{
 						{
 							CodeName: "technology",
-							Operator: OperatorEqual,
+							Operator: ruleapplicability.OperatorEqual,
 							Value:    "adsl",
 						},
 					},
@@ -176,7 +189,7 @@ func TestCalculateNil(t *testing.T) {
 }
 
 func TestCalculateNotNil(t *testing.T) {
-	r, err := Calculate(&Product{}, []Condition{})
+	r, err := Calculate(&product.Product{}, []condition.Condition{})
 	if err != nil {
 		t.Error("Error calculating", err)
 		return
@@ -187,7 +200,7 @@ func TestCalculateNotNil(t *testing.T) {
 }
 
 func TestCalculate2Price(t *testing.T) {
-	r, err := Calculate(&product, []Condition{
+	r, err := Calculate(&p, []condition.Condition{
 		{
 			RuleName: "internetSpeed",
 			Value:    "200",
@@ -208,7 +221,7 @@ func TestCalculate2Price(t *testing.T) {
 }
 
 func TestCalculateADSL(t *testing.T) {
-	r, err := Calculate(&product, []Condition{
+	r, err := Calculate(&p, []condition.Condition{
 		{
 			RuleName: "technology",
 			Value:    "adsl",
@@ -243,7 +256,7 @@ func TestCalculateADSL(t *testing.T) {
 }
 
 func TestCalculateADSL2(t *testing.T) {
-	r, err := Calculate(&product, []Condition{
+	r, err := Calculate(&p, []condition.Condition{
 		{
 			RuleName: "technology",
 			Value:    "adsl",
@@ -278,7 +291,7 @@ func TestCalculateADSL2(t *testing.T) {
 }
 
 func TestCalculateIsMain(t *testing.T) {
-	r, err := Calculate(&product, []Condition{
+	r, err := Calculate(&p, []condition.Condition{
 		{
 			RuleName: "technology",
 			Value:    "adsl",
@@ -295,7 +308,7 @@ func TestCalculateIsMain(t *testing.T) {
 }
 
 func TestCalculateFTTB(t *testing.T) {
-	r, err := Calculate(&product, []Condition{
+	r, err := Calculate(&p, []condition.Condition{
 		{
 			RuleName: "technology",
 			Value:    "fttb",
@@ -328,7 +341,7 @@ func TestCalculateFTTB(t *testing.T) {
 }
 
 func TestCalculateDiscount(t *testing.T) {
-	r, err := Calculate(&product, []Condition{
+	r, err := Calculate(&p, []condition.Condition{
 		{
 			RuleName: "technology",
 			Value:    "xpon",
@@ -361,7 +374,7 @@ func TestCalculateDiscount(t *testing.T) {
 }
 
 func TestCalculateDiscount2(t *testing.T) {
-	r, err := Calculate(&product, []Condition{
+	r, err := Calculate(&p, []condition.Condition{
 		{
 			RuleName: "technology",
 			Value:    "fttb",
